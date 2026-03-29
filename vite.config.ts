@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  // GitHub Pages のサブパスに合わせる
+  base: '/ar-creator-reader/',
   server: {
     host: true,   // スマホ確認用に全インターフェースでリッスン
     port: 5173,
