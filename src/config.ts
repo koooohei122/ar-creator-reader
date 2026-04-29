@@ -28,7 +28,8 @@ export const CONFIG = {
 
   // ---- セグメンテーション ----
   // true: オクルージョンON / false: OFF (デフォルト状態)
-  SEGMENTATION_ENABLED_DEFAULT: true,
+  // 一旦 false でデバッグ。Segmentation が camera 表示を阻害している可能性を切り分ける
+  SEGMENTATION_ENABLED_DEFAULT: false,
   // 処理解像度。小さいほど速いが粗い。256×144 推奨 (モバイル)
   SEGMENTATION_WIDTH: 256,
   SEGMENTATION_HEIGHT: 144,

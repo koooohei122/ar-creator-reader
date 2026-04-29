@@ -82,6 +82,33 @@ export class MindARController {
 
       await this.mindarThree.start()
       this.isRunning = true
+
+      // iOS Safari 等で video element が compositing layer から外れて消えるのを防ぐため
+      // 強制的に GPU layer に promotion + visibility 保証
+      const videoEl = container.querySelector('video') as HTMLVideoElement | null
+      if (videoEl) {
+        videoEl.style.transform = 'translateZ(0)'
+        ;(videoEl.style as CSSStyleDeclaration & { webkitTransform?: string }).webkitTransform = 'translateZ(0)'
+        videoEl.style.willChange = 'transform'
+        videoEl.style.backfaceVisibility = 'hidden'
+        ;(videoEl.style as CSSStyleDeclaration & { webkitBackfaceVisibility?: string }).webkitBackfaceVisibility = 'hidden'
+        videoEl.style.visibility = 'visible'
+        videoEl.style.opacity = '1'
+        // iOS Safari でバックグラウンド遷移後に play() が止まらないよう保証
+        videoEl.setAttribute('playsinline', '')
+        videoEl.setAttribute('webkit-playsinline', '')
+        videoEl.muted = true
+        videoEl.play().catch(() => { /* 既に再生中 */ })
+        console.log('[AR] video element promoted to GPU layer', {
+          width: videoEl.videoWidth,
+          height: videoEl.videoHeight,
+          paused: videoEl.paused,
+          readyState: videoEl.readyState,
+        })
+      } else {
+        console.warn('[AR] video element not found in container after start')
+      }
+
       onStarted()
 
       renderer.setAnimationLoop(() => {

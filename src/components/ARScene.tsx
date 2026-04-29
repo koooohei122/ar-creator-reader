@@ -119,10 +119,21 @@ export const ARScene: React.FC<ARSceneProps> = ({ isStarted }) => {
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       {/* MindAR が video + Three.js canvas を追加するコンテナ */}
       {/* zIndex: 1 で独自 stacking context を作成し、MindAR が追加する video (z-index:-2) を
-          祖先の黒背景より手前に描画させる */}
+          祖先の黒背景より手前に描画させる。
+          transform/willChange で GPU compositing layer に固定し、iOS Safari で video が
+          消えるのを防ぐ。 */}
       <div
         ref={containerRef}
-        style={{ position: 'absolute', inset: 0, zIndex: 1 }}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 1,
+          transform: 'translateZ(0)',
+          WebkitTransform: 'translateZ(0)',
+          willChange: 'transform',
+          WebkitBackfaceVisibility: 'hidden',
+          backfaceVisibility: 'hidden',
+        }}
       />
 
       {/* オクルージョン オーバーレイ (Three.js キャンバスの上に重ねる) */}
