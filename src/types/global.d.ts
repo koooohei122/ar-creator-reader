@@ -48,6 +48,8 @@ interface MindARThreeConstructorOptions {
   uiLoading?: string
   uiScanning?: string
   uiError?: string
+  /** カメラ指定 (スマホ背面カメラ: 'environment') */
+  facing?: 'environment' | 'user'
 }
 
 interface MindARThreeInstance {
