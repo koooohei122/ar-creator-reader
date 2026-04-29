@@ -46,6 +46,14 @@ export class MindARController {
         filterBeta: CONFIG.FILTER_BETA,
         warmupTolerance: CONFIG.WARM_UP_TOLERANCE,
         missTolerance: CONFIG.MISS_TOLERANCE,
+        // MindAR デフォルトの UI overlay を無効化:
+        //   ・自前で StatusBadge / GuideOverlay を提供しているため不要
+        //   ・MindAR の scanning overlay (z-index:2, body 直下) が出現すると
+        //     iOS Safari 等で video の compositing layer が崩れカメラ映像が消える症状を回避
+        // mind-ar@1.2.5 は 'no' を渡すと UI 自体を生成しない (内部で 'no' をガード済み)
+        uiLoading: 'no',
+        uiScanning: 'no',
+        uiError: 'no',
       })
 
       const { renderer, scene, camera } = this.mindarThree
