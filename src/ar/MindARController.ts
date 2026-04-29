@@ -54,6 +54,7 @@ export class MindARController {
         uiLoading: 'no',
         uiScanning: 'no',
         uiError: 'no',
+        facing: 'environment',  // スマホ背面カメラを明示
       })
 
       const { renderer, scene, camera } = this.mindarThree
