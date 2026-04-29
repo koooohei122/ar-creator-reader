@@ -51,10 +51,8 @@ export class MindARController {
         filterBeta: CONFIG.FILTER_BETA,
         warmupTolerance: CONFIG.WARM_UP_TOLERANCE,
         missTolerance: CONFIG.MISS_TOLERANCE,
-        uiLoading: 'no',
-        uiScanning: 'no',
-        uiError: 'no',
-        facing: 'environment',  // スマホ背面カメラを明示
+        // uiLoading/uiScanning/uiError は省略 → MindAR デフォルト UI を使用
+        // ('no' をセレクタとして解釈し null 参照エラーになるため外す)
       })
 
       const { renderer, scene, camera } = this.mindarThree
