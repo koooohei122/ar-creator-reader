@@ -2,14 +2,19 @@
  * AR アプリ設定ファイル
  * ここの値を変えるだけで主要パラメータを調整できます
  */
+
+// Vite が設定する BASE_URL を使う
+// ローカル: '/'  / GitHub Pages: '/ar-creator-reader/'
+const BASE = import.meta.env.BASE_URL
+
 export const CONFIG = {
   // ---- AR ターゲット ----
   // public/targets/marker.mind を生成して配置してください (READMEを参照)
-  TARGET_SRC: '/targets/marker.mind',
+  TARGET_SRC: `${BASE}targets/marker.mind`,
 
   // ---- 3D モデル ----
   // public/models/character.glb を配置してください。なければ自動でフォールバックキャラを表示
-  MODEL_PATH: '/models/character.glb',
+  MODEL_PATH: `${BASE}models/character.glb`,
 
   // ---- キャラクター トランスフォーム ----
   // ターゲット中心からのオフセット (x, y, z)  単位はターゲットの幅=1 に相当
