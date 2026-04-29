@@ -99,7 +99,12 @@ export class MindARController {
         renderer.render(scene, camera)
       })
     } catch (err) {
-      onError(err instanceof Error ? err : new Error(String(err)))
+      const msg = err instanceof Error ? err.message : String(err)
+      // marker.mind が見つからない場合のわかりやすいメッセージ
+      const friendly = msg.includes('404') || msg.includes('Failed to fetch') || msg.includes('network')
+        ? `マーカーファイルが見つかりません (${CONFIG.TARGET_SRC})\nREADME の手順で marker.mind を配置してください`
+        : msg
+      onError(new Error(friendly))
     }
   }
 
