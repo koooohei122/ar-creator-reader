@@ -13,9 +13,7 @@ export const CONFIG = {
   TARGET_SRC: `${BASE}targets/marker.mind`,
 
   // ---- Web リンク ----
-  // マーカー認識時に表示するリンク先URL。'' にすると非表示
   TARGET_URL: 'https://github.com/koooohei122/ar-creator-reader',
-  // ボタンに表示するラベル
   TARGET_URL_LABEL: 'サイトを開く',
 
   // ---- 3D モデル ----
