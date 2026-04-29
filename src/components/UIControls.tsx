@@ -151,6 +151,18 @@ export const UIControls: React.FC<UIControlsProps> = ({ isStarted, onStart, onSt
             </div>
           </div>
 
+          {/* QR コード */}
+          <div style={{ textAlign: 'center' }}>
+            <img
+              src="qr.png"
+              alt="QR Code"
+              style={{ width: 120, height: 120, borderRadius: 8, background: '#fff', padding: 4 }}
+            />
+            <div style={{ color: '#7eb8d4', fontSize: 11, marginTop: 4 }}>
+              このページの QR コード
+            </div>
+          </div>
+
           {/* マーカー手順カード */}
           <div
             style={{
