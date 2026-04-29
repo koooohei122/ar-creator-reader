@@ -12,6 +12,12 @@ export const CONFIG = {
   // public/targets/marker.mind を生成して配置してください (READMEを参照)
   TARGET_SRC: `${BASE}targets/marker.mind`,
 
+  // ---- Web リンク ----
+  // マーカー認識時に表示するリンク先URL。'' にすると非表示
+  TARGET_URL: 'https://github.com/koooohei122/ar-creator-reader',
+  // ボタンに表示するラベル
+  TARGET_URL_LABEL: 'サイトを開く',
+
   // ---- 3D モデル ----
   // public/models/character.glb を配置してください。なければ自動でフォールバックキャラを表示
   MODEL_PATH: `${BASE}models/character.glb`,

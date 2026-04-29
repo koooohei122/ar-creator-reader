@@ -4,6 +4,7 @@ import { UIControls } from './components/UIControls'
 import { StatusBadge } from './components/StatusBadge'
 import { GuideOverlay } from './components/GuideOverlay'
 import { DebugPanel } from './components/DebugPanel'
+import { WebLinkPanel } from './components/WebLinkPanel'
 import { useARStore } from './store'
 
 const App: React.FC = () => {
@@ -35,6 +36,9 @@ const App: React.FC = () => {
 
       {/* スキャンガイド */}
       {isStarted && <GuideOverlay status={status} />}
+
+      {/* Web リンクパネル (マーカー認識中に表示) */}
+      {isStarted && <WebLinkPanel status={status} />}
 
       {/* デバッグパネル */}
       {isStarted && isDebugVisible && <DebugPanel />}
