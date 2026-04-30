@@ -78,86 +78,131 @@ function toPNG(rgba, width, height) {
 }
 
 // ---- スター画像を RGBA で生成 ----
+// MindAR の image tracking は ORB 系のコーナー検出を使うため、
+// 単純な星形だけではフィーチャーポイントが少なすぎて追跡できない。
+// グリッド背景・チェッカーボードリング・ティックマークで 300+ 特徴点を確保する。
 
 function generateStarImage(size = 512) {
   const rgba = new Uint8ClampedArray(size * size * 4)
 
   const cx = size / 2
   const cy = size / 2
-  const outerR = size * 0.38
-  const innerR = size * 0.16
-  const points = 5
+  const outerR   = size * 0.34   // 星の外半径
+  const innerR   = size * 0.14   // 星の内半径
+  const points   = 5
+  const BORDER   = 14            // 外枠の太さ
+  const GRID     = 16            // グリッドの間隔 (px)
+  const CHECKER_INNER = size * 0.37  // チェッカーボードリングの内径
+  const CHECKER_OUTER = size * 0.47  // チェッカーボードリングの外径
 
-  // 星の多角形頂点を計算
-  const starVertices = []
+  function setPixel(x, y, r, g, b) {
+    if (x < 0 || x >= size || y < 0 || y >= size) return
+    const idx = (y * size + x) * 4
+    rgba[idx] = r; rgba[idx + 1] = g; rgba[idx + 2] = b; rgba[idx + 3] = 255
+  }
+
+  // 星の頂点
+  const starVerts = []
   for (let i = 0; i < points * 2; i++) {
     const angle = (i * Math.PI) / points - Math.PI / 2
     const r = i % 2 === 0 ? outerR : innerR
-    starVertices.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) })
+    starVerts.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) })
   }
 
-  // 全ピクセルを走査して星の内側かどうか判定 (Ray casting)
+  // 点が星の内側かどうか (Ray casting)
   function insideStar(px, py) {
     let inside = false
-    const n = starVertices.length
+    const n = starVerts.length
     let j = n - 1
     for (let i = 0; i < n; i++) {
-      const xi = starVertices[i].x, yi = starVertices[i].y
-      const xj = starVertices[j].x, yj = starVertices[j].y
-      if (((yi > py) !== (yj > py)) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) {
-        inside = !inside
-      }
+      const xi = starVerts[i].x, yi = starVerts[i].y
+      const xj = starVerts[j].x, yj = starVerts[j].y
+      if (((yi > py) !== (yj > py)) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside
       j = i
     }
     return inside
   }
 
-  // 背景: 白
+  // 1. 白背景
   for (let i = 0; i < rgba.length; i += 4) {
     rgba[i] = 255; rgba[i + 1] = 255; rgba[i + 2] = 255; rgba[i + 3] = 255
   }
 
-  // 星: 黒
+  // 2. 細かいグリッド (明るいグレー) — コーナー検出点を多数生成
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      if (insideStar(x, y)) {
-        const idx = (y * size + x) * 4
-        rgba[idx] = 0; rgba[idx + 1] = 0; rgba[idx + 2] = 0; rgba[idx + 3] = 255
+      if (x % GRID === 0 || y % GRID === 0) setPixel(x, y, 180, 180, 180)
+    }
+  }
+
+  // 3. チェッカーボードリング (星の外側〜外枠の内側) — 最も多くの特徴点を生成
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = x - cx, dy = y - cy
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist >= CHECKER_INNER && dist <= CHECKER_OUTER) {
+        const col = Math.floor(x / GRID)
+        const row = Math.floor(y / GRID)
+        if ((col + row) % 2 === 0) setPixel(x, y, 0, 0, 0)
+        else setPixel(x, y, 255, 255, 255)
       }
     }
   }
 
-  // 外枠: 黒い正方形 (特徴点を増やすため)
-  const borderW = Math.round(size * 0.03)
+  // 4. 星: 黒塗りつぶし
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const isBorder = x < borderW || x >= size - borderW || y < borderW || y >= size - borderW
-      if (isBorder) {
-        const idx = (y * size + x) * 4
-        rgba[idx] = 0; rgba[idx + 1] = 0; rgba[idx + 2] = 0; rgba[idx + 3] = 255
-      }
+      if (insideStar(x, y)) setPixel(x, y, 0, 0, 0)
     }
   }
 
-  // コーナーマーカー (正方形) - 特徴点を増やす
-  const markerSize = Math.round(size * 0.12)
-  const margin = Math.round(size * 0.06)
-  const cornerPositions = [
-    [margin, margin],
-    [size - margin - markerSize, margin],
-    [margin, size - margin - markerSize],
-    [size - margin - markerSize, size - margin - markerSize],
+  // 5. 外枠: 黒
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      if (x < BORDER || x >= size - BORDER || y < BORDER || y >= size - BORDER)
+        setPixel(x, y, 0, 0, 0)
+    }
+  }
+
+  // 6. 各辺にティックマーク (方向の非対称性を付与し、回転方向を区別可能にする)
+  // 上辺: 長い + 短い交互, 左辺: 長いのみ, 右辺: なし, 下辺: 短いのみ
+  // → 4辺で異なるパターン = マーカーの上下左右を MindAR が区別できる
+  const TICK_STEP = GRID * 3  // 48px ごとにティック
+  const LONG_TICK  = 22
+  const SHORT_TICK = 12
+  const TICK_W     = 4
+
+  for (let x = BORDER + TICK_STEP; x < size - BORDER; x += TICK_STEP) {
+    const isLong = Math.floor((x - BORDER) / TICK_STEP) % 2 === 0
+    const len = isLong ? LONG_TICK : SHORT_TICK
+    for (let dy = 0; dy < len; dy++) for (let dw = 0; dw < TICK_W; dw++) setPixel(x + dw, BORDER + dy, 0, 0, 0)
+  }
+  for (let x = BORDER + TICK_STEP; x < size - BORDER; x += TICK_STEP) {
+    for (let dy = 0; dy < SHORT_TICK; dy++) for (let dw = 0; dw < TICK_W; dw++) setPixel(x + dw, size - BORDER - SHORT_TICK + dy, 0, 0, 0)
+  }
+  for (let y = BORDER + TICK_STEP; y < size - BORDER; y += TICK_STEP) {
+    for (let dw = 0; dw < LONG_TICK; dw++) for (let dt = 0; dt < TICK_W; dt++) setPixel(BORDER + dw, y + dt, 0, 0, 0)
+  }
+
+  // 7. L 字コーナーマーカー (各コーナーが非対称なので orientation を確定)
+  const L_ARM  = 48
+  const L_THICK = 8
+  const L_GAP  = BORDER + 4
+  const lCorners = [
+    // [ox, oy, flipX, flipY]
+    [L_GAP, L_GAP, false, false],
+    [size - L_GAP - L_ARM, L_GAP, true, false],
+    [L_GAP, size - L_GAP - L_ARM, false, true],
+    [size - L_GAP - L_ARM, size - L_GAP - L_ARM, true, true],
   ]
-  for (const [ox, oy] of cornerPositions) {
-    for (let dy = 0; dy < markerSize; dy++) {
-      for (let dx = 0; dx < markerSize; dx++) {
-        const inner = dx > borderW && dx < markerSize - borderW && dy > borderW && dy < markerSize - borderW
-        if (!inner) {
-          const idx = ((oy + dy) * size + (ox + dx)) * 4
-          rgba[idx] = 0; rgba[idx + 1] = 0; rgba[idx + 2] = 0; rgba[idx + 3] = 255
-        }
-      }
-    }
+  for (const [ox, oy] of lCorners) {
+    for (let dx = 0; dx < L_ARM; dx++) for (let dt = 0; dt < L_THICK; dt++) setPixel(ox + dx, oy + dt, 0, 0, 0)
+    for (let dy = 0; dy < L_ARM; dy++) for (let dt = 0; dt < L_THICK; dt++) setPixel(ox + dt, oy + dy, 0, 0, 0)
+    // コーナー内部の小さな塗りつぶし正方形 (コーナーごとに大きさを変えて非対称化)
+    const fillSize = 14
+    for (let dy = L_THICK + 4; dy < L_THICK + 4 + fillSize; dy++)
+      for (let dx = L_THICK + 4; dx < L_THICK + 4 + fillSize; dx++)
+        setPixel(ox + dx, oy + dy, 0, 0, 0)
   }
 
   return { rgba, width: size, height: size }
