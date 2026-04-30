@@ -43,7 +43,7 @@ export const CONFIG = {
   FPS_CHECK_INTERVAL_MS: 5000,
 
   // ---- デバッグ ----
-  DEBUG_DEFAULT: true,
+  DEBUG_DEFAULT: false,
 
   // ---- MindAR トラッキング感度 ----
   FILTER_MIN_CF: 0.001,

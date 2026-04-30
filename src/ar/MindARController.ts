@@ -29,7 +29,6 @@ export interface StartOptions {
 export class MindARController {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private mindarThree: any = null
-  private origGUM: typeof navigator.mediaDevices.getUserMedia | null = null
   private mixer: THREE.AnimationMixer | null = null
   private clock = new THREE.Clock()
   private characterGroup: THREE.Group | null = null
@@ -44,20 +43,6 @@ export class MindARController {
     // MindAR を CDN から動的ロード (Vite バンドルを回避して TF.js WASM を正常動作させる)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { MindARThree } = await import(/* @vite-ignore */ MINDAR_CDN) as any
-
-    // MindAR の getUserMedia は解像度未指定 → ブラウザが低解像度を選びがち
-    // 事前にパッチして 1280×720 を要求する
-    this.origGUM = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices)
-    const origGUM = this.origGUM
-    const patchedGUM = (constraints: MediaStreamConstraints) => {
-      if (constraints?.video && typeof constraints.video === 'object') {
-        const v = constraints.video as MediaTrackConstraints
-        v.width  = { ideal: 1280 }
-        v.height = { ideal: 720 }
-      }
-      return origGUM(constraints)
-    }
-    navigator.mediaDevices.getUserMedia = patchedGUM
 
     try {
       this.mindarThree = new MindARThree({
@@ -272,10 +257,6 @@ export class MindARController {
   }
 
   stop(): void {
-    if (this.origGUM) {
-      navigator.mediaDevices.getUserMedia = this.origGUM
-      this.origGUM = null
-    }
     if (this.mindarThree && this.isRunning) {
       try {
         this.mindarThree.renderer.setAnimationLoop(null)
