@@ -29,6 +29,7 @@ export interface StartOptions {
 export class MindARController {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private mindarThree: any = null
+  private origGUM: typeof navigator.mediaDevices.getUserMedia | null = null
   private mixer: THREE.AnimationMixer | null = null
   private clock = new THREE.Clock()
   private characterGroup: THREE.Group | null = null
@@ -43,6 +44,18 @@ export class MindARController {
     // MindAR を CDN から動的ロード (Vite バンドルを回避して TF.js WASM を正常動作させる)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { MindARThree } = await import(/* @vite-ignore */ MINDAR_CDN) as any
+
+    // カメラ高解像度リクエスト（MindAR は video:{} のみで解像度未指定のため）
+    this.origGUM = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices)
+    const origGUM = this.origGUM
+    navigator.mediaDevices.getUserMedia = (constraints: MediaStreamConstraints) => {
+      if (constraints?.video && typeof constraints.video === 'object') {
+        const v = constraints.video as MediaTrackConstraints
+        v.width  = { ideal: 1920 }
+        v.height = { ideal: 1080 }
+      }
+      return origGUM(constraints)
+    }
 
     try {
       this.mindarThree = new MindARThree({
@@ -180,10 +193,10 @@ export class MindARController {
   private addFallbackCharacter(parent: THREE.Group): void {
     this.fallbackStartTime = Date.now()
 
-    const bodyMat  = new THREE.MeshLambertMaterial({ color: 0x1565C0 })
-    const bellyMat = new THREE.MeshLambertMaterial({ color: 0xBBDEFB })
-    const finMat   = new THREE.MeshLambertMaterial({ color: 0x0D47A1 })
-    const eyeMat   = new THREE.MeshBasicMaterial ({ color: 0x0D0D0D })
+    const bodyMat  = new THREE.MeshBasicMaterial({ color: 0x1565C0 })
+    const bellyMat = new THREE.MeshBasicMaterial({ color: 0xBBDEFB })
+    const finMat   = new THREE.MeshBasicMaterial({ color: 0x0D47A1 })
+    const eyeMat   = new THREE.MeshBasicMaterial({ color: 0x0D0D0D })
 
     // 胴体
     const body = new THREE.Mesh(new THREE.SphereGeometry(0.45, 24, 16), bodyMat)
@@ -257,6 +270,10 @@ export class MindARController {
   }
 
   stop(): void {
+    if (this.origGUM) {
+      navigator.mediaDevices.getUserMedia = this.origGUM
+      this.origGUM = null
+    }
     if (this.mindarThree && this.isRunning) {
       try {
         this.mindarThree.renderer.setAnimationLoop(null)

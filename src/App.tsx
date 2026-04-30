@@ -37,20 +37,6 @@ const App: React.FC = () => {
       {/* スキャンガイド */}
       {isStarted && <GuideOverlay status={status} />}
 
-      {/* ターゲット検出バナー — トラッキング確認用 (大きく目立つ) */}
-      {isStarted && status === 'target_found' && (
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0,
-          zIndex: 50, pointerEvents: 'none',
-          background: 'rgba(0,200,80,0.95)',
-          color: '#fff', fontWeight: 900, fontSize: 22,
-          padding: '18px 0', textAlign: 'center',
-          boxShadow: '0 4px 24px rgba(0,255,120,0.7)',
-          letterSpacing: '0.05em',
-        }}>
-          ★ MARKER DETECTED ★
-        </div>
-      )}
 
       {/* Web リンクパネル (マーカー認識中に表示) */}
       {isStarted && <WebLinkPanel status={status} />}

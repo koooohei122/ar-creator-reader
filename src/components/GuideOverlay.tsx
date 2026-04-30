@@ -79,7 +79,7 @@ export const GuideOverlay: React.FC<GuideOverlayProps> = ({ status }) => {
           backdropFilter: 'blur(4px)',
         }}
       >
-        marker.jpg をカメラに映してください
+        青いカードをカメラに向けてください
       </p>
 
       <style>{`
