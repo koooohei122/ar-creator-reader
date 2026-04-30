@@ -78,22 +78,26 @@ function toPNG(rgba, width, height) {
 }
 
 // ---- スター画像を RGBA で生成 ----
-// MindAR の image tracking は ORB 系のコーナー検出を使うため、
-// 単純な星形だけではフィーチャーポイントが少なすぎて追跡できない。
-// グリッド背景・チェッカーボードリング・ティックマークで 300+ 特徴点を確保する。
+// チェッカーボードは規則的すぎてフィーチャーマッチャーが混乱する。
+// 疑似乱数テクスチャ (4×4 px セル) を使うと各領域がユニークになり認識率が大幅向上する。
 
 function generateStarImage(size = 512) {
   const rgba = new Uint8ClampedArray(size * size * 4)
 
   const cx = size / 2
   const cy = size / 2
-  const outerR   = size * 0.34   // 星の外半径
-  const innerR   = size * 0.14   // 星の内半径
-  const points   = 5
-  const BORDER   = 14            // 外枠の太さ
-  const GRID     = 16            // グリッドの間隔 (px)
-  const CHECKER_INNER = size * 0.37  // チェッカーボードリングの内径
-  const CHECKER_OUTER = size * 0.47  // チェッカーボードリングの外径
+  const outerR = size * 0.30
+  const innerR = size * 0.12
+  const points = 5
+  const BORDER = 16
+  const CELL   = 6   // ランダムテクスチャのセルサイズ
+
+  // シード付き LCG 乱数 (再現性のある同じマーカーを生成するため)
+  let seed = 0xABCD1234
+  function rand() {
+    seed = (seed * 1664525 + 1013904223) & 0xFFFFFFFF
+    return (seed >>> 0) / 0xFFFFFFFF
+  }
 
   function setPixel(x, y, r, g, b) {
     if (x < 0 || x >= size || y < 0 || y >= size) return
@@ -109,7 +113,6 @@ function generateStarImage(size = 512) {
     starVerts.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) })
   }
 
-  // 点が星の内側かどうか (Ray casting)
   function insideStar(px, py) {
     let inside = false
     const n = starVerts.length
@@ -123,86 +126,54 @@ function generateStarImage(size = 512) {
     return inside
   }
 
-  // 1. 白背景
-  for (let i = 0; i < rgba.length; i += 4) {
-    rgba[i] = 255; rgba[i + 1] = 255; rgba[i + 2] = 255; rgba[i + 3] = 255
-  }
-
-  // 2. 細かいグリッド (明るいグレー) — コーナー検出点を多数生成
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      if (x % GRID === 0 || y % GRID === 0) setPixel(x, y, 180, 180, 180)
-    }
-  }
-
-  // 3. チェッカーボードリング (星の外側〜外枠の内側) — 最も多くの特徴点を生成
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const dx = x - cx, dy = y - cy
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      if (dist >= CHECKER_INNER && dist <= CHECKER_OUTER) {
-        const col = Math.floor(x / GRID)
-        const row = Math.floor(y / GRID)
-        if ((col + row) % 2 === 0) setPixel(x, y, 0, 0, 0)
-        else setPixel(x, y, 255, 255, 255)
+  // 1. 疑似乱数テクスチャ: 各 CELL×CELL ブロックを独立した濃さで塗る
+  //    → 全領域が一意になり ORB コーナー検出で大量の特徴点が生成される
+  const cellsX = Math.ceil(size / CELL)
+  const cellsY = Math.ceil(size / CELL)
+  for (let cy2 = 0; cy2 < cellsY; cy2++) {
+    for (let cx2 = 0; cx2 < cellsX; cx2++) {
+      const v = rand() < 0.45 ? 0 : (rand() < 0.5 ? 120 : 255)  // 黒/グレー/白
+      for (let dy = 0; dy < CELL; dy++) {
+        for (let dx = 0; dx < CELL; dx++) {
+          setPixel(cx2 * CELL + dx, cy2 * CELL + dy, v, v, v)
+        }
       }
     }
   }
 
-  // 4. 星: 黒塗りつぶし
+  // 2. 星の周囲に白い円形クリアゾーンを作り、星を目立たせる
+  const clearR = outerR + 18
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = x - cx, dy = y - cy
+      if (dx * dx + dy * dy < clearR * clearR) setPixel(x, y, 255, 255, 255)
+    }
+  }
+
+  // 3. 星: 黒塗りつぶし
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       if (insideStar(x, y)) setPixel(x, y, 0, 0, 0)
     }
   }
 
-  // 5. 外枠: 黒
+  // 4. 外枠: 黒 (白余白を挟んで二重枠にして特徴点を増やす)
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       if (x < BORDER || x >= size - BORDER || y < BORDER || y >= size - BORDER)
         setPixel(x, y, 0, 0, 0)
+      else if (x < BORDER + 8 || x >= size - BORDER - 8 || y < BORDER + 8 || y >= size - BORDER - 8)
+        setPixel(x, y, 255, 255, 255)
+      else if (x < BORDER + 12 || x >= size - BORDER - 12 || y < BORDER + 12 || y >= size - BORDER - 12)
+        setPixel(x, y, 0, 0, 0)
     }
   }
 
-  // 6. 各辺にティックマーク (方向の非対称性を付与し、回転方向を区別可能にする)
-  // 上辺: 長い + 短い交互, 左辺: 長いのみ, 右辺: なし, 下辺: 短いのみ
-  // → 4辺で異なるパターン = マーカーの上下左右を MindAR が区別できる
-  const TICK_STEP = GRID * 3  // 48px ごとにティック
-  const LONG_TICK  = 22
-  const SHORT_TICK = 12
-  const TICK_W     = 4
-
-  for (let x = BORDER + TICK_STEP; x < size - BORDER; x += TICK_STEP) {
-    const isLong = Math.floor((x - BORDER) / TICK_STEP) % 2 === 0
-    const len = isLong ? LONG_TICK : SHORT_TICK
-    for (let dy = 0; dy < len; dy++) for (let dw = 0; dw < TICK_W; dw++) setPixel(x + dw, BORDER + dy, 0, 0, 0)
-  }
-  for (let x = BORDER + TICK_STEP; x < size - BORDER; x += TICK_STEP) {
-    for (let dy = 0; dy < SHORT_TICK; dy++) for (let dw = 0; dw < TICK_W; dw++) setPixel(x + dw, size - BORDER - SHORT_TICK + dy, 0, 0, 0)
-  }
-  for (let y = BORDER + TICK_STEP; y < size - BORDER; y += TICK_STEP) {
-    for (let dw = 0; dw < LONG_TICK; dw++) for (let dt = 0; dt < TICK_W; dt++) setPixel(BORDER + dw, y + dt, 0, 0, 0)
-  }
-
-  // 7. L 字コーナーマーカー (各コーナーが非対称なので orientation を確定)
-  const L_ARM  = 48
-  const L_THICK = 8
-  const L_GAP  = BORDER + 4
-  const lCorners = [
-    // [ox, oy, flipX, flipY]
-    [L_GAP, L_GAP, false, false],
-    [size - L_GAP - L_ARM, L_GAP, true, false],
-    [L_GAP, size - L_GAP - L_ARM, false, true],
-    [size - L_GAP - L_ARM, size - L_GAP - L_ARM, true, true],
-  ]
-  for (const [ox, oy] of lCorners) {
-    for (let dx = 0; dx < L_ARM; dx++) for (let dt = 0; dt < L_THICK; dt++) setPixel(ox + dx, oy + dt, 0, 0, 0)
-    for (let dy = 0; dy < L_ARM; dy++) for (let dt = 0; dt < L_THICK; dt++) setPixel(ox + dt, oy + dy, 0, 0, 0)
-    // コーナー内部の小さな塗りつぶし正方形 (コーナーごとに大きさを変えて非対称化)
-    const fillSize = 14
-    for (let dy = L_THICK + 4; dy < L_THICK + 4 + fillSize; dy++)
-      for (let dx = L_THICK + 4; dx < L_THICK + 4 + fillSize; dx++)
-        setPixel(ox + dx, oy + dy, 0, 0, 0)
+  // 5. 四隅に大きな L 字マーカー (MindAR が向きを確定するための非対称要素)
+  const L = 52, T = 10, GAP = BORDER + 14
+  const corners = [[GAP, GAP], [size-GAP-L, GAP], [GAP, size-GAP-L], [size-GAP-L, size-GAP-L]]
+  for (const [ox, oy] of corners) {
+    for (let i = 0; i < L; i++) for (let t = 0; t < T; t++) { setPixel(ox+i, oy+t, 0,0,0); setPixel(ox+t, oy+i, 0,0,0) }
   }
 
   return { rgba, width: size, height: size }
