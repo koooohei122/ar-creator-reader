@@ -108,8 +108,21 @@ export class MindARController {
       await this.mindarThree.start()
       this.isRunning = true
 
+      // Three.js canvas の CSS を強制設定
+      // iOS Safari: alpha:true のキャンバスがデフォルトで非表示になるケースへの対処
+      const glCanvas = renderer.domElement
+      glCanvas.style.position = 'absolute'
+      glCanvas.style.top = '0'
+      glCanvas.style.left = '0'
+      glCanvas.style.width = '100%'
+      glCanvas.style.height = '100%'
+      glCanvas.style.visibility = 'visible'
+      glCanvas.style.opacity = '1'
+      glCanvas.style.zIndex = '1'
+      console.log('[AR] renderer canvas size:', glCanvas.width, 'x', glCanvas.height, 'css:', glCanvas.style.cssText)
+
       // iOS Safari 等で video element が compositing layer から外れて消えるのを防ぐため
-      // 強制的に GPU layer に promotion + visibility 保証
+      // video 要素へ直接 GPU layer を適用 (コンテナの transform は除去済み)
       const videoEl = container.querySelector('video') as HTMLVideoElement | null
       if (videoEl) {
         videoEl.style.transform = 'translateZ(0)'
@@ -119,12 +132,11 @@ export class MindARController {
         ;(videoEl.style as CSSStyleDeclaration & { webkitBackfaceVisibility?: string }).webkitBackfaceVisibility = 'hidden'
         videoEl.style.visibility = 'visible'
         videoEl.style.opacity = '1'
-        // iOS Safari でバックグラウンド遷移後に play() が止まらないよう保証
         videoEl.setAttribute('playsinline', '')
         videoEl.setAttribute('webkit-playsinline', '')
         videoEl.muted = true
         videoEl.play().catch(() => { /* 既に再生中 */ })
-        console.log('[AR] video element promoted to GPU layer', {
+        console.log('[AR] video element GPU layer applied', {
           width: videoEl.videoWidth,
           height: videoEl.videoHeight,
           paused: videoEl.paused,

@@ -120,19 +120,15 @@ export const ARScene: React.FC<ARSceneProps> = ({ isStarted }) => {
       {/* MindAR が video + Three.js canvas を追加するコンテナ */}
       {/* zIndex: 1 で独自 stacking context を作成し、MindAR が追加する video (z-index:-2) を
           祖先の黒背景より手前に描画させる。
-          transform/willChange で GPU compositing layer に固定し、iOS Safari で video が
-          消えるのを防ぐ。 */}
+          iOS Safari: WebGL canvas が CSS transform の子要素だと描画されないバグがあるため
+          コンテナ自体には transform を付けない。video の GPU 促進は MindARController で
+          video 要素へ直接 translateZ(0) を付けることで対処する。 */}
       <div
         ref={containerRef}
         style={{
           position: 'absolute',
           inset: 0,
           zIndex: 1,
-          transform: 'translateZ(0)',
-          WebkitTransform: 'translateZ(0)',
-          willChange: 'transform',
-          WebkitBackfaceVisibility: 'hidden',
-          backfaceVisibility: 'hidden',
         }}
       />
 
