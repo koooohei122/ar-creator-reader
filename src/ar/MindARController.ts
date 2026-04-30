@@ -198,59 +198,63 @@ export class MindARController {
     const finMat   = new THREE.MeshBasicMaterial({ color: 0x0D47A1 })
     const eyeMat   = new THREE.MeshBasicMaterial({ color: 0x0D0D0D })
 
-    // 胴体
+    // ローカル Y 軸方向にクジラを組み立て、Z 軸で 90° 回転させて横向きにする
+    // (ローカル Y → ワールド -X = 水平方向)
+    const w = new THREE.Group()
+    w.rotation.z = Math.PI / 2
+    parent.add(w)
+
+    // 胴体: ローカル Y 方向に細長い
     const body = new THREE.Mesh(new THREE.SphereGeometry(0.45, 24, 16), bodyMat)
-    body.scale.set(2.2, 1.0, 0.95)
-    parent.add(body)
+    body.scale.set(1.0, 2.2, 0.95)
+    w.add(body)
 
-    // お腹（明るい色）
+    // お腹（明るい色）: ローカル -X → ワールド -Y (下側) に配置
     const belly = new THREE.Mesh(new THREE.SphereGeometry(0.43, 20, 12), bellyMat)
-    belly.scale.set(2.05, 0.6, 0.88)
-    belly.position.set(0, -0.16, 0)
-    parent.add(belly)
+    belly.scale.set(0.88, 2.0, 0.88)
+    belly.position.set(-0.16, 0, 0)
+    w.add(belly)
 
-    // 頭
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.33, 16, 12), bodyMat)
-    head.scale.set(1.05, 0.9, 1.0)
-    head.position.set(-0.65, 0.04, 0)
-    parent.add(head)
+    // 頭: ローカル +Y 方向 → ワールド -X (左側)
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 12), bodyMat)
+    head.position.set(0, 0.65, 0)
+    w.add(head)
 
-    // 背びれ
+    // 背びれ: ローカル +X → ワールド +Y (上側) に頂点が向くよう rotation.z = -PI/2
     const dorsal = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.35, 5), finMat)
-    dorsal.position.set(0.12, 0.46, 0)
-    dorsal.rotation.z = -0.18
-    parent.add(dorsal)
+    dorsal.position.set(0.46, 0.08, 0)
+    dorsal.rotation.z = -Math.PI / 2
+    w.add(dorsal)
 
-    // 尾びれ（アニメーション用 → leftArm）
-    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.38, 0.12), finMat)
-    tail.position.set(0.9, 0, 0)
-    parent.add(tail)
+    // 尾びれ基部: ローカル -Y → ワールド +X (右側)。アニメーション用 (leftArm)
+    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.24, 0.14), finMat)
+    tail.position.set(0, -0.88, 0)
+    w.add(tail)
     this.leftArm = tail
+
+    // 尾びれ上下フルーク: ローカル ±X → ワールド ±Y (上下に広がる)
     const fluke1 = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.06, 0.26), finMat)
-    fluke1.position.set(0.14, 0, 0.22); fluke1.rotation.y = 0.35
+    fluke1.position.set(0.22, -0.08, 0)
     tail.add(fluke1)
     const fluke2 = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.06, 0.26), finMat)
-    fluke2.position.set(0.14, 0, -0.22); fluke2.rotation.y = -0.35
+    fluke2.position.set(-0.22, -0.08, 0)
     tail.add(fluke2)
 
-    // 胸びれ右（アニメーション用 → rightArm）
-    const pecR = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.06, 0.14), finMat)
-    pecR.position.set(-0.05, -0.28, 0.44)
-    pecR.rotation.x = 0.5; pecR.rotation.z = -0.25
-    parent.add(pecR)
-    this.rightArm = pecR
+    // 胸びれ (奥側): ローカル ±Z (奥行き方向)。アニメーション用 (rightArm)
+    const pec1 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.3, 0.14), finMat)
+    pec1.position.set(-0.28, -0.05, 0.44)
+    w.add(pec1)
+    this.rightArm = pec1
 
-    // 胸びれ左
-    const pecL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.06, 0.14), finMat)
-    pecL.position.set(-0.05, -0.28, -0.44)
-    pecL.rotation.x = -0.5; pecL.rotation.z = -0.25
-    parent.add(pecL)
+    const pec2 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.3, 0.14), finMat)
+    pec2.position.set(-0.28, -0.05, -0.44)
+    w.add(pec2)
 
-    // 目
-    for (const z of [0.28, -0.28]) {
+    // 目: 頭部の ±Z に配置
+    for (const z of [0.27, -0.27]) {
       const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), eyeMat)
-      eye.position.set(-0.62, 0.13, z)
-      parent.add(eye)
+      eye.position.set(0, 0.62, z)
+      w.add(eye)
     }
   }
 
