@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>MindAR Minimal Test</title>
+  <!-- three@0.151 を使う: 0.152+ で sRGBEncoding が削除されたため MindAR が壊れる -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.151.0/build/three.module.js"
+    }
+  }
+  </script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; overflow: hidden; }
+    #container { position: fixed; inset: 0; width: 100%; height: 100%; }
+    #log {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+      background: rgba(0,0,0,0.85); color: #0ff;
+      padding: 14px 12px; font: bold 14px/1.6 monospace;
+      white-space: pre-wrap; word-break: break-all;
+      max-height: 40vh; overflow-y: auto;
+    }
+    #log.found { background: rgba(0,160,60,0.95); color: #fff; font-size: 22px; }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+  <div id="log">⏳ Loading...</div>
+
+  <script type="module">
+    const logEl = document.getElementById('log')
+    const lines = []
+    function log(msg, isFound = false) {
+      const t = new Date().toISOString().slice(11,19)
+      lines.push(`[${t}] ${msg}`)
+      logEl.textContent = lines.slice(-8).join('\n')
+      if (isFound) logEl.className = 'found'
+    }
+
+    try {
+      log('1. importing MindARThree...')
+      const { MindARThree } = await import('./libs/mindar-image-three.prod.js')
+      log('2. MindARThree loaded OK')
+
+      import * as THREE from 'three'
+
+      const mindarThree = new MindARThree({
+        container: document.getElementById('container'),
+        imageTargetSrc: './targets/marker.mind',
+        maxTrack: 1,
+        warmupTolerance: 1,
+        missTolerance: 5,
+        uiLoading: 'no',
+        uiScanning: 'no',
+        uiError: 'no',
+      })
+
+      const { renderer, scene, camera } = mindarThree
+
+      scene.add(new THREE.AmbientLight(0xffffff, 1))
+      const dir = new THREE.DirectionalLight(0xffffff, 1)
+      dir.position.set(0, 2, 1)
+      scene.add(dir)
+
+      const anchor = mindarThree.addAnchor(0)
+
+      // 赤球: トラッキング確認用
+      const sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.25, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0xff2200 })
+      )
+      anchor.group.add(sphere)
+
+      anchor.onTargetFound = () => {
+        log('★★★ MARKER DETECTED ★★★', true)
+      }
+      anchor.onTargetLost = () => {
+        logEl.className = ''
+        log('marker lost — searching...')
+      }
+
+      log('3. calling mindarThree.start()...')
+      await mindarThree.start()
+      log('4. started! scanning for marker...')
+
+      renderer.setAnimationLoop(() => renderer.render(scene, camera))
+
+    } catch (err) {
+      logEl.className = ''
+      log('❌ ERROR: ' + err.message)
+      if (err.stack) log(err.stack.slice(0, 300))
+    }
+  </script>
+</body>
+</html>
