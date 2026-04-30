@@ -22,8 +22,8 @@ export const CONFIG = {
 
   // ---- キャラクター トランスフォーム ----
   // ターゲット中心からのオフセット (x, y, z)  単位はターゲットの幅=1 に相当
-  CHARACTER_POSITION: [0, 0.1, 0] as [number, number, number],
-  CHARACTER_SCALE:    [0.15, 0.15, 0.15] as [number, number, number],
+  CHARACTER_POSITION: [0, 0.3, 0] as [number, number, number],
+  CHARACTER_SCALE:    [0.5, 0.5, 0.5] as [number, number, number],
   CHARACTER_ROTATION: [0, 0, 0] as [number, number, number],
 
   // ---- セグメンテーション ----

@@ -66,8 +66,14 @@ export class MindARController {
 
       // アンカー (ターゲット画像 #0)
       const anchor = this.mindarThree.addAnchor(0)
-      anchor.onTargetFound = onTargetFound
-      anchor.onTargetLost = onTargetLost
+      anchor.onTargetFound = () => {
+        console.log('[AR] ★ onTargetFound fired')
+        onTargetFound()
+      }
+      anchor.onTargetLost = () => {
+        console.log('[AR] onTargetLost fired')
+        onTargetLost()
+      }
 
       // キャラクター用グループ
       this.characterGroup = new THREE.Group()
