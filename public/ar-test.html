@@ -4,13 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
   <title>AR Test</title>
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.151.0/build/three.module.js"
-    }
-  }
-  </script>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { background:#000; overflow:hidden; }
@@ -21,25 +14,26 @@
       padding:12px; font:bold 13px/1.7 monospace;
       white-space:pre-wrap; word-break:break-all;
     }
-    #log.ok { background:rgba(0,160,60,0.95); color:#fff; font-size:20px; }
+    #log.ok  { background:rgba(0,160,60,0.95); color:#fff; font-size:20px; }
     #log.err { background:rgba(180,0,0,0.95); color:#fff; }
   </style>
 </head>
 <body>
   <div id="container"></div>
-  <div id="log">⏳ Loading...</div>
+  <div id="log">⏳ Loading modules from CDN...</div>
 
   <script type="module">
-    import { MindARThree } from './libs/mindar-image-three.prod.js'
-    import { AmbientLight, DirectionalLight, Mesh, SphereGeometry, MeshBasicMaterial } from 'three'
+    // esm.sh が "three" bare import を自動解決 → importmap 不要
+    import { MindARThree } from 'https://esm.sh/mind-ar@1.2.5/dist/mindar-image-three.prod.js?deps=three@0.151.0'
+    import * as THREE from 'https://esm.sh/three@0.151.0'
 
     const logEl = document.getElementById('log')
     const lines = []
-    function log(msg, cls = '') {
+    function log(msg, cls) {
       const t = new Date().toISOString().slice(11,19)
-      lines.push(`[${t}] ${msg}`)
+      lines.push('[' + t + '] ' + msg)
       logEl.textContent = lines.slice(-10).join('\n')
-      logEl.className = cls
+      if (cls) logEl.className = cls
     }
 
     log('modules loaded OK')
@@ -57,25 +51,20 @@
       })
 
       const { renderer, scene, camera } = mindarThree
-
-      scene.add(new AmbientLight(0xffffff, 1))
-      const dir = new DirectionalLight(0xffffff, 1)
-      dir.position.set(0, 2, 1)
-      scene.add(dir)
+      scene.add(new THREE.AmbientLight(0xffffff, 1))
 
       const anchor = mindarThree.addAnchor(0)
-      const sphere = new Mesh(
-        new SphereGeometry(0.25, 16, 16),
-        new MeshBasicMaterial({ color: 0xff2200 })
-      )
-      anchor.group.add(sphere)
+      anchor.group.add(new THREE.Mesh(
+        new THREE.SphereGeometry(0.3, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0xff2200 })
+      ))
 
       anchor.onTargetFound = () => log('★★★ MARKER DETECTED ★★★', 'ok')
-      anchor.onTargetLost  = () => { logEl.className = ''; log('searching...') }
+      anchor.onTargetLost  = () => { logEl.className = ''; log('lost — searching...') }
 
-      log('starting MindAR...')
+      log('starting camera...')
       await mindarThree.start()
-      log('camera started — point at marker card')
+      log('camera OK — point at blue card')
 
       renderer.setAnimationLoop(() => renderer.render(scene, camera))
 
