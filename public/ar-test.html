@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-  <title>MindAR Minimal Test</title>
-  <!-- three@0.151 を使う: 0.152+ で sRGBEncoding が削除されたため MindAR が壊れる -->
+  <title>AR Test</title>
   <script type="importmap">
   {
     "imports": {
@@ -13,17 +12,17 @@
   }
   </script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #000; overflow: hidden; }
-    #container { position: fixed; inset: 0; width: 100%; height: 100%; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:#000; overflow:hidden; }
+    #container { position:fixed; inset:0; }
     #log {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
-      background: rgba(0,0,0,0.85); color: #0ff;
-      padding: 14px 12px; font: bold 14px/1.6 monospace;
-      white-space: pre-wrap; word-break: break-all;
-      max-height: 40vh; overflow-y: auto;
+      position:fixed; top:0; left:0; right:0; z-index:9999;
+      background:rgba(0,0,0,0.88); color:#0ff;
+      padding:12px; font:bold 13px/1.7 monospace;
+      white-space:pre-wrap; word-break:break-all;
     }
-    #log.found { background: rgba(0,160,60,0.95); color: #fff; font-size: 22px; }
+    #log.ok { background:rgba(0,160,60,0.95); color:#fff; font-size:20px; }
+    #log.err { background:rgba(180,0,0,0.95); color:#fff; }
   </style>
 </head>
 <body>
@@ -31,22 +30,21 @@
   <div id="log">⏳ Loading...</div>
 
   <script type="module">
+    import { MindARThree } from './libs/mindar-image-three.prod.js'
+    import { AmbientLight, DirectionalLight, Mesh, SphereGeometry, MeshBasicMaterial } from 'three'
+
     const logEl = document.getElementById('log')
     const lines = []
-    function log(msg, isFound = false) {
+    function log(msg, cls = '') {
       const t = new Date().toISOString().slice(11,19)
       lines.push(`[${t}] ${msg}`)
-      logEl.textContent = lines.slice(-8).join('\n')
-      if (isFound) logEl.className = 'found'
+      logEl.textContent = lines.slice(-10).join('\n')
+      logEl.className = cls
     }
 
+    log('modules loaded OK')
+
     try {
-      log('1. importing MindARThree...')
-      const { MindARThree } = await import('./libs/mindar-image-three.prod.js')
-      log('2. MindARThree loaded OK')
-
-      import * as THREE from 'three'
-
       const mindarThree = new MindARThree({
         container: document.getElementById('container'),
         imageTargetSrc: './targets/marker.mind',
@@ -60,38 +58,29 @@
 
       const { renderer, scene, camera } = mindarThree
 
-      scene.add(new THREE.AmbientLight(0xffffff, 1))
-      const dir = new THREE.DirectionalLight(0xffffff, 1)
+      scene.add(new AmbientLight(0xffffff, 1))
+      const dir = new DirectionalLight(0xffffff, 1)
       dir.position.set(0, 2, 1)
       scene.add(dir)
 
       const anchor = mindarThree.addAnchor(0)
-
-      // 赤球: トラッキング確認用
-      const sphere = new THREE.Mesh(
-        new THREE.SphereGeometry(0.25, 16, 16),
-        new THREE.MeshBasicMaterial({ color: 0xff2200 })
+      const sphere = new Mesh(
+        new SphereGeometry(0.25, 16, 16),
+        new MeshBasicMaterial({ color: 0xff2200 })
       )
       anchor.group.add(sphere)
 
-      anchor.onTargetFound = () => {
-        log('★★★ MARKER DETECTED ★★★', true)
-      }
-      anchor.onTargetLost = () => {
-        logEl.className = ''
-        log('marker lost — searching...')
-      }
+      anchor.onTargetFound = () => log('★★★ MARKER DETECTED ★★★', 'ok')
+      anchor.onTargetLost  = () => { logEl.className = ''; log('searching...') }
 
-      log('3. calling mindarThree.start()...')
+      log('starting MindAR...')
       await mindarThree.start()
-      log('4. started! scanning for marker...')
+      log('camera started — point at marker card')
 
       renderer.setAnimationLoop(() => renderer.render(scene, camera))
 
     } catch (err) {
-      logEl.className = ''
-      log('❌ ERROR: ' + err.message)
-      if (err.stack) log(err.stack.slice(0, 300))
+      log('ERROR: ' + err.message, 'err')
     }
   </script>
 </body>
