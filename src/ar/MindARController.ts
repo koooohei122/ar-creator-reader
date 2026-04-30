@@ -84,22 +84,13 @@ export class MindARController {
       // アンカー (ターゲット画像 #0)
       const anchor = this.mindarThree.addAnchor(0)
       anchor.onTargetFound = () => {
-        console.log('[AR] ★ onTargetFound fired — anchor.group.visible:', anchor.group.visible)
+        console.log('[AR] ★ onTargetFound fired')
         onTargetFound()
       }
       anchor.onTargetLost = () => {
         console.log('[AR] onTargetLost fired')
         onTargetLost()
       }
-
-      // 診断用: アンカー原点に鮮やかな赤球を置く
-      // → これが画面に出ればトラッキング自体は成功している証明になる
-      const diagSphere = new THREE.Mesh(
-        new THREE.SphereGeometry(0.15, 16, 16),
-        new THREE.MeshBasicMaterial({ color: 0xff0000 })
-      )
-      diagSphere.position.set(0, 0, 0)
-      anchor.group.add(diagSphere)
 
       // キャラクター用グループ
       this.characterGroup = new THREE.Group()
@@ -203,46 +194,77 @@ export class MindARController {
 
   private addFallbackCharacter(parent: THREE.Group): void {
     this.fallbackStartTime = Date.now()
-    const bodyMat = new THREE.MeshLambertMaterial({ color: 0x4fc3f7 })
-    const skinMat = new THREE.MeshLambertMaterial({ color: 0xffcc99 })
-    const legMat  = new THREE.MeshLambertMaterial({ color: 0x1565c0 })
-    const eyeMat  = new THREE.MeshBasicMaterial({ color: 0x222222 })
 
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.55, 0.2), bodyMat)
-    body.position.y = 0.9
+    const bodyMat  = new THREE.MeshLambertMaterial({ color: 0x1565C0 })
+    const bellyMat = new THREE.MeshLambertMaterial({ color: 0xBBDEFB })
+    const finMat   = new THREE.MeshLambertMaterial({ color: 0x0D47A1 })
+    const eyeMat   = new THREE.MeshBasicMaterial ({ color: 0x0D0D0D })
+
+    // 胴体
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.45, 24, 16), bodyMat)
+    body.scale.set(2.2, 1.0, 0.95)
     parent.add(body)
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), skinMat)
-    head.position.y = 1.35
+    // お腹（明るい色）
+    const belly = new THREE.Mesh(new THREE.SphereGeometry(0.43, 20, 12), bellyMat)
+    belly.scale.set(2.05, 0.6, 0.88)
+    belly.position.set(0, -0.16, 0)
+    parent.add(belly)
+
+    // 頭
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.33, 16, 12), bodyMat)
+    head.scale.set(1.05, 0.9, 1.0)
+    head.position.set(-0.65, 0.04, 0)
     parent.add(head)
 
-    ;[[-0.08, 0.19], [0.08, 0.19]].forEach(([x, z]) => {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), eyeMat)
-      eye.position.set(x, 1.38, z)
+    // 背びれ
+    const dorsal = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.35, 5), finMat)
+    dorsal.position.set(0.12, 0.46, 0)
+    dorsal.rotation.z = -0.18
+    parent.add(dorsal)
+
+    // 尾びれ（アニメーション用 → leftArm）
+    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.38, 0.12), finMat)
+    tail.position.set(0.9, 0, 0)
+    parent.add(tail)
+    this.leftArm = tail
+    const fluke1 = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.06, 0.26), finMat)
+    fluke1.position.set(0.14, 0, 0.22); fluke1.rotation.y = 0.35
+    tail.add(fluke1)
+    const fluke2 = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.06, 0.26), finMat)
+    fluke2.position.set(0.14, 0, -0.22); fluke2.rotation.y = -0.35
+    tail.add(fluke2)
+
+    // 胸びれ右（アニメーション用 → rightArm）
+    const pecR = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.06, 0.14), finMat)
+    pecR.position.set(-0.05, -0.28, 0.44)
+    pecR.rotation.x = 0.5; pecR.rotation.z = -0.25
+    parent.add(pecR)
+    this.rightArm = pecR
+
+    // 胸びれ左
+    const pecL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.06, 0.14), finMat)
+    pecL.position.set(-0.05, -0.28, -0.44)
+    pecL.rotation.x = -0.5; pecL.rotation.z = -0.25
+    parent.add(pecL)
+
+    // 目
+    for (const z of [0.28, -0.28]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), eyeMat)
+      eye.position.set(-0.62, 0.13, z)
       parent.add(eye)
-    })
-
-    this.leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.45, 0.15), bodyMat)
-    this.leftArm.position.set(-0.3, 0.85, 0)
-    parent.add(this.leftArm)
-
-    this.rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.45, 0.15), bodyMat)
-    this.rightArm.position.set(0.3, 0.85, 0)
-    parent.add(this.rightArm)
-
-    ;[[-0.12, legMat], [0.12, legMat]].forEach(([x, mat]) => {
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.5, 0.15), mat as THREE.Material)
-      leg.position.set(x as number, 0.35, 0)
-      parent.add(leg)
-    })
+    }
   }
 
   private updateFallbackAnim(): void {
     if (!this.leftArm || !this.rightArm || !this.characterGroup) return
     const t = (Date.now() - this.fallbackStartTime) / 1000
-    this.characterGroup.position.y = CONFIG.CHARACTER_POSITION[1] + Math.sin(t * 2) * 0.02
-    this.leftArm.rotation.x  =  Math.sin(t * 2) * 0.35
-    this.rightArm.rotation.x = -Math.sin(t * 2) * 0.35
+    // ゆったり浮かぶ
+    this.characterGroup.position.y = CONFIG.CHARACTER_POSITION[1] + Math.sin(t * 1.2) * 0.05
+    // 尾びれを上下に振る
+    this.leftArm.rotation.z  =  Math.sin(t * 2.5) * 0.4
+    // 胸びれをゆっくり揺らす
+    this.rightArm.rotation.z = -0.25 + Math.sin(t * 1.5) * 0.12
   }
 
   setCharacterVisible(visible: boolean): void {
