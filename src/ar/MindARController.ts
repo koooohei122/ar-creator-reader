@@ -3,16 +3,19 @@
  * MindAR の初期化・ライフサイクル・3D キャラクター管理を担う
  *
  * 設計メモ:
- * - mind-ar を npm package として直接 import (CDN / global 依存を排除)
- * - Vite が mind-ar 内の Three.js import を同一 node_modules/three に解決するため
- *   MindAR シーンと GLTFLoader で同じ Three.js インスタンスを共有できる
+ * - MindAR は Vite でバンドルすると内包する TF.js の WASM ロードパスが壊れる
+ * - そのため MindAR だけ esm.sh CDN から動的インポートしてバンドルを回避する
+ * - Three.js は npm 版をそのまま使用 (Three.js は flag-check ベースなので
+ *   異なるインスタンス間でも Object3D の追加・レンダリングが動作する)
  */
 
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-// @ts-expect-error mind-ar は TypeScript 型定義を持たない
-import { MindARThree } from 'mind-ar/dist/mindar-image-three.prod.js'
 import { CONFIG } from '../config'
+
+// esm.sh が "three" の bare import を自動解決するため importmap 不要
+// deps=three@0.151.0: sRGBEncoding が残っている最後のバージョンを指定
+const MINDAR_CDN = 'https://esm.sh/mind-ar@1.2.5/dist/mindar-image-three.prod.js?deps=three@0.151.0'
 
 export interface StartOptions {
   container: HTMLElement
@@ -37,6 +40,10 @@ export class MindARController {
 
   async start(opts: StartOptions): Promise<void> {
     const { container, onTargetFound, onTargetLost, onStarted, onError, isCharacterVisible } = opts
+
+    // MindAR を CDN から動的ロード (Vite バンドルを回避して TF.js WASM を正常動作させる)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { MindARThree } = await import(/* @vite-ignore */ MINDAR_CDN) as any
 
     // MindAR の getUserMedia は解像度未指定 → ブラウザが低解像度を選びがち
     // 事前にパッチして 1280×720 を要求する
