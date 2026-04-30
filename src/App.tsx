@@ -9,7 +9,7 @@ import { useARStore } from './store'
 
 const App: React.FC = () => {
   const [isStarted, setIsStarted] = useState(false)
-  const { status, isDebugVisible, errorMessage, setError, setStatus } = useARStore()
+  const { status, errorMessage, setError, setStatus } = useARStore()
 
   const handleStart = () => {
     setError(null)
@@ -55,8 +55,8 @@ const App: React.FC = () => {
       {/* Web リンクパネル (マーカー認識中に表示) */}
       {isStarted && <WebLinkPanel status={status} />}
 
-      {/* デバッグパネル */}
-      {isStarted && isDebugVisible && <DebugPanel />}
+      {/* デバッグパネル (常時表示) */}
+      {isStarted && <DebugPanel />}
 
       {/* ---- エラーオーバーレイ ---- */}
       {isStarted && status === 'error' && (

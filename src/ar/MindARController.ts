@@ -77,13 +77,22 @@ export class MindARController {
       // アンカー (ターゲット画像 #0)
       const anchor = this.mindarThree.addAnchor(0)
       anchor.onTargetFound = () => {
-        console.log('[AR] ★ onTargetFound fired')
+        console.log('[AR] ★ onTargetFound fired — anchor.group.visible:', anchor.group.visible)
         onTargetFound()
       }
       anchor.onTargetLost = () => {
         console.log('[AR] onTargetLost fired')
         onTargetLost()
       }
+
+      // 診断用: アンカー原点に鮮やかな赤球を置く
+      // → これが画面に出ればトラッキング自体は成功している証明になる
+      const diagSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.15, 16, 16),
+        new THREE.MeshBasicMaterial({ color: 0xff0000 })
+      )
+      diagSphere.position.set(0, 0, 0)
+      anchor.group.add(diagSphere)
 
       // キャラクター用グループ
       this.characterGroup = new THREE.Group()
